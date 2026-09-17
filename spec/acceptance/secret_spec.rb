@@ -30,28 +30,26 @@ describe 'quadlets_secret' do
         PUPPET
       end
     end
+    describe 'created secrets' do
+      it 'root:asecret exists' do
+        user_info = Etc.getpwnam('root')
+        runenv = {
+          cwd: user_info.dir,
+          failonfail: true,
+          uid: user_info.uid,
+          gid: user_info.gid,
+          combine: false,
+          custom_environment: { 'HOME' => user_info.dir, 'XDG_RUNTIME_DIR' => "/run/user/#{user_info.uid}" },
+        }
+        result = command('podman secret ls --filter Name=asecret -n --format "{{.Name}}"', runenv)
+        expect(result.stdout.strip).to eq('asecret')
+      end
 
-    it 'root:asecret exists' do
-      user_info = Etc.getpwnam('root')
-      runenv = {
-        cwd: user_info.dir,
-        failonfail: true,
-        uid: user_info.uid,
-        gid: user_info.gid,
-        combine: false,
-        custom_environment: { 'HOME' => user_info.dir, 'XDG_RUNTIME_DIR' => "/run/user/#{user_info.uid}" },
-      }
-      # result = command('podman secret ls --filter Name=asecret -n --format "{{.Name}}"', runenv)
-      result = command('podman secret ls', runenv)
-      expect(result.stdout.strip).to eq('asecret')
+      it 'root:anothersecret has labels' do
+        result = command('podman secret inspect anothersecret --format "{{.Spec.Labels}}"')
+        expect(result.stdout.strip).to eq('map[label1:one label2:two]')
+      end
     end
-
-    it 'root:anothersecret has labels' do
-      # result = command('podman secret inspect anothersecret --format "{{.Spec.Labels}}"')
-      result = command('podman secret inspect anothersecret')
-      expect(result.stdout.strip).to eq('map[label1:one label2:two]')
-    end
-
     describe 'directories for secret with path set' do
       describe file('/tmp/withpathsecret') do
         it { is_expected.to be_directory }
